@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      - SPEECHMATICS_API_KEY=${SPEECHMATICS_API_KEY}
+      - BACKBOARD_API_KEY=${BACKBOARD_API_KEY}
+      - BACKBOARD_ASSISTANT_ID=${BACKBOARD_ASSISTANT_ID}
+      - BACKBOARD_LLM_PROVIDER=${BACKBOARD_LLM_PROVIDER:-openai}
+      - BACKBOARD_MODEL_NAME=${BACKBOARD_MODEL_NAME:-gpt-4o}
+      - DEBUG=false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+networks:
+  default:
+    name: hackathon-concierge
