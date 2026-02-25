@@ -130,17 +130,24 @@ class BackboardLLMService:
                             data = line[6:]
 
                             if data == "[DONE]":
+                                logger.debug("[Stream] [DONE] received")
                                 return
 
                             try:
                                 parsed = json.loads(data)
-
                                 chunk_type = parsed.get("type")
+                                logger.debug(f"[Stream] event type={chunk_type}, keys={list(parsed.keys())}")
+
                                 if chunk_type == "content_streaming":
                                     if parsed.get("content"):
                                         yield parsed["content"]
                                 elif chunk_type == "message_complete":
-                                    return
+                                    # Don't return early — wait for [DONE]
+                                    # Backboard may send multiple messages
+                                    # in a single stream (e.g. thinking + answer)
+                                    logger.debug("[Stream] message_complete (continuing)")
+                                elif chunk_type in ("run_started", "run_ended"):
+                                    logger.debug(f"[Stream] {chunk_type}: {parsed.get('status', '')}")
                             except json.JSONDecodeError:
                                 pass
 

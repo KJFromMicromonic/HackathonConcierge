@@ -56,6 +56,7 @@ function App() {
     sendText,
     lastResponse,
     lastNotification,
+    provisioningStatus,
     switchThread,
     createNewThread,
     isStreaming,
@@ -277,6 +278,7 @@ function App() {
             messages={displayMessages}
             isVoiceMode={mode === 'voice'}
             userName={profile?.first_name}
+            provisioningStatus={provisioningStatus}
           />
         </div>
 

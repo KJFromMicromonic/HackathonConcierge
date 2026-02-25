@@ -979,6 +979,61 @@ body {
   color: var(--magenta);
 }
 
+/* ==================== PROVISIONING CARD ==================== */
+.provisioning-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 4px;
+  backdrop-filter: blur(12px);
+  margin-top: 1.5rem;
+}
+
+.provisioning-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.provisioning-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--glass-border);
+  border-top-color: var(--cyan);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+.provisioning-message {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-align: center;
+  letter-spacing: 0.05em;
+}
+
+.provisioning-progress {
+  width: 100%;
+  max-width: 240px;
+  height: 4px;
+  background: var(--bg-secondary);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.provisioning-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--cyan), var(--magenta));
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
 /* Markdown content styling */
 .message-text {
   font-size: 0.9rem;

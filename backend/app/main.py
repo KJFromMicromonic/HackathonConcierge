@@ -23,7 +23,9 @@ from loguru import logger
 from app.config import get_settings
 from app.services.backboard_llm import BackboardLLMService
 from app.services.supabase_session_store import get_supabase_session_store
+from app.services.user_assistant_service import get_user_assistant_service
 from app.services.activity_poller import ActivityPoller, is_asking_about_activity, format_activity_context
+from app.services.context_injector import get_context_for_message
 from app.auth import get_current_user, get_current_user_optional, AuthUser
 from app.models.chat_models import CHAT_MODELS, DEFAULT_CHAT_MODEL_ID, get_model_by_id
 from app.websocket_handler import manager
@@ -636,14 +638,46 @@ async def _run_chat_mode(websocket: WebSocket, user_id: str, session_store, app:
     """
     Run chat mode: direct text conversation via LLM service.
 
-    Uses chat_llm_provider/chat_model_name from config.
+    On first connect, provisions the user's assistant (with progress
+    updates sent to the frontend) before entering the message loop.
     """
     llm_service = BackboardLLMService(mode="chat")
     llm_service.set_user_id(user_id)
     poller: ActivityPoller = getattr(app.state, "activity_poller", None)
 
+    async def send_provisioning(step: str, message: str, progress: int = 0, total: int = 0):
+        """Relay provisioning progress to the WebSocket client."""
+        await send_json(websocket, "provisioning", {
+            "step": step,
+            "message": message,
+            "progress": progress,
+            "total": total,
+        })
+
     try:
         await send_json(websocket, "status", "connected")
+
+        # ---- Provision assistant + thread eagerly (with progress) ----
+        assistant_service = get_user_assistant_service()
+        needs_provisioning = (await assistant_service.get_user_assistant(user_id)) is None
+
+        if needs_provisioning:
+            logger.info(f"[{user_id}] First login — provisioning assistant")
+
+        assistant_id = await assistant_service.get_or_create_assistant(
+            user_id,
+            on_progress=send_provisioning if needs_provisioning else None,
+        )
+
+        # Ensure thread exists
+        if needs_provisioning:
+            await send_provisioning("creating_thread", "Starting your conversation...", 0, 0)
+
+        thread_id = await session_store.get_or_create_thread_async(user_id)
+
+        if needs_provisioning:
+            await send_provisioning("complete", "Ready!", 0, 0)
+            logger.info(f"[{user_id}] Provisioning complete: assistant={assistant_id} thread={thread_id}")
 
         while True:
             message = await websocket.receive_json()
@@ -663,16 +697,30 @@ async def _run_chat_mode(websocket: WebSocket, user_id: str, session_store, app:
                 logger.info(f"[{user_id}] Text: {text} (model={model_id or 'default'})")
                 await send_json(websocket, "status", "thinking")
 
-                # Inject recent activity context if user is asking about it
+                # Inject relevant context into the prompt
                 llm_text = text
+                context_parts = []
+
+                # 1. Activity feed context ("what's happening?")
                 if poller and is_asking_about_activity(text):
                     activities = poller.get_recent_activities(limit=15)
                     if activities:
-                        ctx = format_activity_context(activities)
-                        llm_text = (
-                            f"[RECENT HACKATHON ACTIVITY for context]\n{ctx}\n\n"
-                            f"[USER QUESTION]\n{text}"
+                        context_parts.append(
+                            f"[RECENT HACKATHON ACTIVITY]\n{format_activity_context(activities)}"
                         )
+
+                # 2. Document context (keyword-matched from shared_docs)
+                doc_context = get_context_for_message(text)
+                if doc_context:
+                    context_parts.append(
+                        f"[REFERENCE DOCUMENTATION — use this to answer accurately]\n{doc_context}"
+                    )
+
+                if context_parts:
+                    llm_text = (
+                        "\n\n".join(context_parts)
+                        + f"\n\n[USER QUESTION]\n{text}"
+                    )
 
                 # Stream response from Backboard
                 full_response = ""

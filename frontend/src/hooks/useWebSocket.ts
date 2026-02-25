@@ -15,12 +15,20 @@ export interface NotificationData {
   }
 }
 
+export interface ProvisioningStatus {
+  step: 'creating_assistant' | 'uploading_docs' | 'verifying' | 'creating_thread' | 'complete'
+  message: string
+  progress: number
+  total: number
+}
+
 interface UseWebSocketReturn {
   isConnected: boolean
   status: Status
   sendText: (text: string, modelId?: string) => void
   lastResponse: string | null
   lastNotification: NotificationData | null
+  provisioningStatus: ProvisioningStatus | null
   switchThread: (threadId: string) => void
   createNewThread: () => Promise<string | null>
   isStreaming: boolean
@@ -32,6 +40,7 @@ export function useWebSocket(enabled: boolean = true): UseWebSocketReturn {
   const [status, setStatus] = useState<Status>('idle')
   const [lastResponse, setLastResponse] = useState<string | null>(null)
   const [lastNotification, setLastNotification] = useState<NotificationData | null>(null)
+  const [provisioningStatus, setProvisioningStatus] = useState<ProvisioningStatus | null>(null)
 
   // Streaming state
   const [isStreaming, setIsStreaming] = useState(false)
@@ -113,6 +122,15 @@ export function useWebSocket(enabled: boolean = true): UseWebSocketReturn {
 
           case 'notification':
             setLastNotification(message.data as NotificationData)
+            break
+
+          case 'provisioning':
+            const pData = message.data as ProvisioningStatus
+            setProvisioningStatus(pData)
+            if (pData.step === 'complete') {
+              // Clear after a short delay so the UI can show "Ready!"
+              setTimeout(() => setProvisioningStatus(null), 1500)
+            }
             break
 
           case 'thread_switched':
@@ -235,6 +253,7 @@ export function useWebSocket(enabled: boolean = true): UseWebSocketReturn {
     sendText,
     lastResponse,
     lastNotification,
+    provisioningStatus,
     switchThread,
     createNewThread,
     isStreaming,

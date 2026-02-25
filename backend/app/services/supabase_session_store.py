@@ -78,28 +78,14 @@ class SupabaseSessionStore:
         }
 
     async def _get_or_create_user_assistant(self, user_id: str) -> str:
-        """Get the user's personal assistant ID, or create one if needed."""
-        client = self._get_client()
+        """Get the user's personal assistant ID, or create one if needed.
 
-        # Check if user already has an assistant
-        try:
-            resp = await client.get(
-                f"{self._base_url}/user_assistants",
-                headers=self._headers,
-                params={"user_id": f"eq.{user_id}", "select": "assistant_id"}
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            if data and len(data) > 0:
-                return data[0]["assistant_id"]
-        except Exception as e:
-            logger.error(f"Error checking user assistant: {e}")
-
-        # No assistant - auto-provision one
-        logger.info(f"Auto-provisioning assistant for user {user_id}")
+        Delegates to UserAssistantService which has per-user locking
+        to prevent race conditions on first login.
+        """
         from app.services.user_assistant_service import get_user_assistant_service
-        assistant_service = get_user_assistant_service()
-        return await assistant_service.create_assistant_for_user(user_id)
+        service = get_user_assistant_service()
+        return await service.get_or_create_assistant(user_id)
 
     async def _create_thread_async(self, user_id: str) -> str:
         """Create a new Backboard thread for the user's assistant."""
