@@ -3,11 +3,24 @@ import { supabase } from '../lib/supabase'
 
 type Status = 'idle' | 'connecting' | 'connected' | 'thinking' | 'error' | 'auth_error'
 
+export interface NotificationData {
+  notification_type: 'announcement' | 'activity' | 'team_activity'
+  message: string
+  activity: {
+    id: string
+    type: string
+    actor_name: string
+    detail: string
+    created_at: string
+  }
+}
+
 interface UseWebSocketReturn {
   isConnected: boolean
   status: Status
   sendText: (text: string, modelId?: string) => void
   lastResponse: string | null
+  lastNotification: NotificationData | null
   switchThread: (threadId: string) => void
   createNewThread: () => Promise<string | null>
   isStreaming: boolean
@@ -18,6 +31,7 @@ export function useWebSocket(enabled: boolean = true): UseWebSocketReturn {
   const [isConnected, setIsConnected] = useState(false)
   const [status, setStatus] = useState<Status>('idle')
   const [lastResponse, setLastResponse] = useState<string | null>(null)
+  const [lastNotification, setLastNotification] = useState<NotificationData | null>(null)
 
   // Streaming state
   const [isStreaming, setIsStreaming] = useState(false)
@@ -95,6 +109,10 @@ export function useWebSocket(enabled: boolean = true): UseWebSocketReturn {
             isStreamingRef.current = false
             setIsStreaming(false)
             setStreamingContent('')
+            break
+
+          case 'notification':
+            setLastNotification(message.data as NotificationData)
             break
 
           case 'thread_switched':
@@ -216,6 +234,7 @@ export function useWebSocket(enabled: boolean = true): UseWebSocketReturn {
     status,
     sendText,
     lastResponse,
+    lastNotification,
     switchThread,
     createNewThread,
     isStreaming,

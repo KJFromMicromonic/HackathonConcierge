@@ -15,9 +15,10 @@ type Mode = 'chat' | 'voice';
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'notification';
   content: string;
   timestamp: Date;
+  notificationType?: 'announcement' | 'activity' | 'team_activity';
 }
 
 function App() {
@@ -54,6 +55,7 @@ function App() {
     status,
     sendText,
     lastResponse,
+    lastNotification,
     switchThread,
     createNewThread,
     isStreaming,
@@ -84,6 +86,22 @@ function App() {
       setMessages(prev => [...prev, newMsg]);
     }
   }, [lastResponse]);
+
+  // Handle proactive notifications from activity feed
+  const lastProcessedNotification = useRef<string>('');
+  useEffect(() => {
+    if (lastNotification && lastNotification.message !== lastProcessedNotification.current) {
+      lastProcessedNotification.current = lastNotification.message;
+      const notifMsg: Message = {
+        id: `notif_${Date.now()}`,
+        role: 'notification',
+        content: lastNotification.message,
+        timestamp: new Date(),
+        notificationType: lastNotification.notification_type,
+      };
+      setMessages(prev => [...prev, notifMsg]);
+    }
+  }, [lastNotification]);
 
   // Handle thread selection
   const handleSelectThread = async (threadId: string) => {

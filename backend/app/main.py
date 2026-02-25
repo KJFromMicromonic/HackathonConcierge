@@ -23,8 +23,10 @@ from loguru import logger
 from app.config import get_settings
 from app.services.backboard_llm import BackboardLLMService
 from app.services.supabase_session_store import get_supabase_session_store
+from app.services.activity_poller import ActivityPoller, is_asking_about_activity, format_activity_context
 from app.auth import get_current_user, get_current_user_optional, AuthUser
 from app.models.chat_models import CHAT_MODELS, DEFAULT_CHAT_MODEL_ID, get_model_by_id
+from app.websocket_handler import manager
 from livekitapp.api import router as livekit_router
 
 import httpx
@@ -45,8 +47,16 @@ async def lifespan(app: FastAPI):
     """Application lifespan handler."""
     logger.info(f"Starting {settings.app_name}...")
     logger.info(f"Supabase URL: {settings.supabase_url}")
+
+    # Start activity feed poller for proactive notifications
+    poller = ActivityPoller(manager)
+    await poller.start()
+    app.state.activity_poller = poller
+
     yield
+
     logger.info("Shutting down...")
+    await poller.stop()
     store = get_session_store()
     await store.aclose()
 
@@ -616,12 +626,13 @@ async def websocket_endpoint(
         return
 
     logger.info(f"User {user_id} connected in chat mode")
+    manager.register(user_id, websocket)
 
     session_store = get_session_store()
-    await _run_chat_mode(websocket, user_id, session_store)
+    await _run_chat_mode(websocket, user_id, session_store, app)
 
 
-async def _run_chat_mode(websocket: WebSocket, user_id: str, session_store):
+async def _run_chat_mode(websocket: WebSocket, user_id: str, session_store, app: FastAPI):
     """
     Run chat mode: direct text conversation via LLM service.
 
@@ -629,6 +640,7 @@ async def _run_chat_mode(websocket: WebSocket, user_id: str, session_store):
     """
     llm_service = BackboardLLMService(mode="chat")
     llm_service.set_user_id(user_id)
+    poller: ActivityPoller = getattr(app.state, "activity_poller", None)
 
     try:
         await send_json(websocket, "status", "connected")
@@ -651,10 +663,21 @@ async def _run_chat_mode(websocket: WebSocket, user_id: str, session_store):
                 logger.info(f"[{user_id}] Text: {text} (model={model_id or 'default'})")
                 await send_json(websocket, "status", "thinking")
 
+                # Inject recent activity context if user is asking about it
+                llm_text = text
+                if poller and is_asking_about_activity(text):
+                    activities = poller.get_recent_activities(limit=15)
+                    if activities:
+                        ctx = format_activity_context(activities)
+                        llm_text = (
+                            f"[RECENT HACKATHON ACTIVITY for context]\n{ctx}\n\n"
+                            f"[USER QUESTION]\n{text}"
+                        )
+
                 # Stream response from Backboard
                 full_response = ""
                 async for token in llm_service.get_response_stream(
-                    text,
+                    llm_text,
                     llm_provider=llm_provider,
                     model=model_name,
                 ):
@@ -690,6 +713,7 @@ async def _run_chat_mode(websocket: WebSocket, user_id: str, session_store):
         except:
             pass
     finally:
+        manager.disconnect(user_id)
         await llm_service.cleanup()
 
 

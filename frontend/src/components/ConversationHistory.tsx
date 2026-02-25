@@ -2,9 +2,10 @@ import ReactMarkdown from 'react-markdown'
 
 interface Message {
   id: string
-  role: 'user' | 'assistant'
+  role: 'user' | 'assistant' | 'notification'
   content: string
   timestamp: Date
+  notificationType?: 'announcement' | 'activity' | 'team_activity'
 }
 
 interface ConversationHistoryProps {
@@ -41,11 +42,18 @@ export function ConversationHistory({
       ) : (
         <div className="messages">
           {messages.map((message) => (
-            <div key={message.id} className={`message ${message.role}`}>
+            <div key={message.id} className={`message ${message.role} ${message.notificationType || ''}`}>
               <div className="message-avatar">
-                {message.role === 'user' ? '👤' : '🤖'}
+                {message.role === 'user' ? '👤' : message.role === 'notification' ? '📢' : '🤖'}
               </div>
               <div className="message-content">
+                {message.role === 'notification' && (
+                  <span className={`notification-badge ${message.notificationType || ''}`}>
+                    {message.notificationType === 'announcement' ? 'Announcement'
+                      : message.notificationType === 'team_activity' ? 'Team'
+                      : 'Update'}
+                  </span>
+                )}
                 <div className="message-text">
                   <ReactMarkdown>{message.content}</ReactMarkdown>
                 </div>

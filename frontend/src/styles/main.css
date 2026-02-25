@@ -936,6 +936,49 @@ body {
   backdrop-filter: blur(12px);
 }
 
+/* Notification messages */
+.message.notification .message-content {
+  background: rgba(255, 200, 0, 0.06);
+  border-color: rgba(255, 200, 0, 0.2);
+  border-left: 3px solid var(--cyan);
+}
+
+.message.notification.announcement .message-content {
+  border-left-color: #ffcc00;
+}
+
+.message.notification.team_activity .message-content {
+  border-left-color: var(--magenta);
+}
+
+.message.notification.activity .message-content {
+  border-left-color: var(--cyan);
+}
+
+.notification-badge {
+  display: inline-block;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 2px 8px;
+  border-radius: 3px;
+  margin-bottom: 0.5rem;
+  background: rgba(0, 242, 255, 0.12);
+  color: var(--cyan);
+}
+
+.notification-badge.announcement {
+  background: rgba(255, 200, 0, 0.15);
+  color: #ffcc00;
+}
+
+.notification-badge.team_activity {
+  background: rgba(112, 0, 255, 0.15);
+  color: var(--magenta);
+}
+
 /* Markdown content styling */
 .message-text {
   font-size: 0.9rem;
