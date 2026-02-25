@@ -27,7 +27,7 @@ from loguru import logger
 
 from livekit import agents
 from livekit.agents import AgentSession, Agent, room_io
-from livekit.plugins import silero
+from livekit.plugins import silero, speechmatics
 
 import sys
 from pathlib import Path
@@ -38,6 +38,7 @@ if _backend_dir not in sys.path:
     sys.path.insert(0, _backend_dir)
 
 from livekitapp.backboard_llm import BackboardLLM
+from app.assistant_template import SYSTEM_PROMPT as BASE_SYSTEM_PROMPT
 
 # Load environment variables
 env_path = Path(__file__).parent.parent / ".env"
@@ -58,18 +59,14 @@ VOICE_MODEL_NAME = os.getenv("VOICE_MODEL_NAME", "gpt-4o-mini")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 
-# System prompt for the voice agent
-SYSTEM_PROMPT = """You are AURA (AI-powered Universal Resource Assistant), the official voice concierge for the hackathon.
-
-Your role:
-- Help participants with hackathon logistics, rules, and deadlines
-- Answer questions about sponsor APIs and available tools
-- Provide guidance on project ideas and technical challenges
-- Encourage and support teams throughout the event
-- Remember important details about each participant
-
-Personality: Friendly, enthusiastic, technically competent, concise.
-Keep voice responses short and conversational — no more than 2-3 sentences per turn.
+# Voice-specific system prompt: shared base + voice guidelines
+VOICE_SYSTEM_PROMPT = BASE_SYSTEM_PROMPT + """
+## Voice Mode Guidelines
+- Keep responses SHORT — 2-3 sentences max per turn
+- Be conversational and natural, not robotic
+- Avoid markdown formatting, bullet lists, or code blocks — speak in plain sentences
+- Use simple language that sounds good when spoken aloud
+- If the user asks a complex question, give a brief answer and offer to elaborate
 """
 
 
@@ -78,7 +75,7 @@ class HackathonAgent(Agent):
 
     def __init__(self) -> None:
         super().__init__(
-            instructions=SYSTEM_PROMPT,
+            instructions=VOICE_SYSTEM_PROMPT,
         )
 
     async def on_enter(self) -> None:
@@ -166,13 +163,16 @@ async def entrypoint(ctx: agents.JobContext) -> None:
         model_name=VOICE_MODEL_NAME,
     )
 
-    # Create the voice pipeline session
-    # STT and TTS use string shorthand for LiveKit inference
-    # (or swap with direct plugin instances for Speechmatics/Deepgram/etc.)
+    # Create the voice pipeline session with Speechmatics STT + TTS
     session = AgentSession(
-        stt="deepgram/nova-3:multi",
+        stt=speechmatics.STT(
+            language="en",
+            include_partials=True,
+        ),
         llm=backboard_llm,
-        tts="cartesia/sonic-3",
+        tts=speechmatics.TTS(
+            voice="sarah",
+        ),
         vad=silero.VAD.load(),
     )
 
