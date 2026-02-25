@@ -1,0 +1,6 @@
+[project]
+  subdomain = "conversyai-u0s8ky7z"
+
+[agent]
+  id = "CA_JVnqf7Ud4wyX"
+  dockerfile = "Dockerfile.agent"

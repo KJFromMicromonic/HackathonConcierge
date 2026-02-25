@@ -18,5 +18,12 @@ RUN python -c "import torch; torch.hub.load('snakers4/silero-vad', 'silero_vad',
 # Copy application code
 COPY . .
 
-# Run the LiveKit agent (not the FastAPI server)
-CMD ["python", "livekitapp/agent.py", "start"]
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD python -c "import httpx; httpx.get('http://localhost:8000/health')" || exit 1
+
+# Run with uvicorn
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -23,6 +23,7 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+from livekit.agents.voice.agent_session import TurnDetectionMode
 from loguru import logger
 
 from livekit import agents
@@ -167,7 +168,8 @@ async def entrypoint(ctx: agents.JobContext) -> None:
     session = AgentSession(
         stt=speechmatics.STT(
             language="en",
-            include_partials=True,
+            enable_partials=True,
+            turn_detection_mode=TurnDetectionMode.SMART_TURN,
         ),
         llm=backboard_llm,
         tts=speechmatics.TTS(
