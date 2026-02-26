@@ -146,6 +146,11 @@ class BackboardLLMService:
                                     # Backboard may send multiple messages
                                     # in a single stream (e.g. thinking + answer)
                                     logger.debug("[Stream] message_complete (continuing)")
+                                elif chunk_type == "error":
+                                    error_msg = parsed.get("error", "Unknown error")
+                                    logger.error(f"[Stream] Backboard error: {error_msg}")
+                                    yield f"I'm sorry, I encountered an error: {error_msg}"
+                                    return
                                 elif chunk_type in ("run_started", "run_ended"):
                                     logger.debug(f"[Stream] {chunk_type}: {parsed.get('status', '')}")
                             except json.JSONDecodeError:
