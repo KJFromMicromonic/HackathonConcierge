@@ -1,3 +1,4 @@
+import { useEffect, useRef } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import type { ProvisioningStatus } from '../hooks/useWebSocket'
@@ -16,6 +17,7 @@ interface ConversationHistoryProps {
   isVoiceMode?: boolean
   userName?: string | null
   provisioningStatus?: ProvisioningStatus | null
+  isThinking?: boolean
 }
 
 function ProvisioningCard({ status }: { status: ProvisioningStatus }) {
@@ -46,13 +48,36 @@ function ProvisioningCard({ status }: { status: ProvisioningStatus }) {
   )
 }
 
+function TypingIndicator() {
+  return (
+    <div className="message assistant typing-indicator-msg">
+      <div className="message-avatar">🤖</div>
+      <div className="message-content">
+        <div className="typing-indicator">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function ConversationHistory({
   messages,
   interimTranscript = '',
   isVoiceMode = false,
   userName,
   provisioningStatus,
+  isThinking = false,
 }: ConversationHistoryProps) {
+  const bottomRef = useRef<HTMLDivElement>(null)
+
+  // Auto-scroll to bottom on new messages, streaming, or thinking
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages, isThinking])
+
   return (
     <div className="conversation-history">
       {provisioningStatus ? (
@@ -107,6 +132,9 @@ export function ConversationHistory({
             </div>
           ))}
 
+          {/* Typing indicator (chat mode, before streaming starts) */}
+          {isThinking && <TypingIndicator />}
+
           {/* Interim transcript (voice mode only) */}
           {isVoiceMode && interimTranscript && (
             <div className="message user interim">
@@ -116,6 +144,9 @@ export function ConversationHistory({
               </div>
             </div>
           )}
+
+          {/* Scroll anchor */}
+          <div ref={bottomRef} />
         </div>
       )}
     </div>

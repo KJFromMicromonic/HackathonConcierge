@@ -279,6 +279,7 @@ function App() {
             isVoiceMode={mode === 'voice'}
             userName={profile?.first_name}
             provisioningStatus={provisioningStatus}
+            isThinking={status === 'thinking' && !isStreaming}
           />
         </div>
 
