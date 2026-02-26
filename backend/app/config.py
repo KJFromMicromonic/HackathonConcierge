@@ -41,7 +41,7 @@ class Settings(BaseSettings):
     # App settings
     app_name: str = "Hackathon Concierge"
     debug: bool = False
-    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "https://www.activateyourvoice.tech"]
+    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:5174", "http://localhost:5175", "https://www.activateyourvoice.tech", "https://assistant.activateyourvoice.tech"]
 
     class Config:
         env_file = str(BACKEND_DIR / ".env")

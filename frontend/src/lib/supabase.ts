@@ -6,7 +6,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIU
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // API base URL
-export const API_BASE = import.meta.env.DEV ? 'http://localhost:8000' : ''
+export const API_BASE = import.meta.env.DEV ? 'http://localhost:8000' : 'https://api.activateyourvoice.tech'
 
 // Helper for authenticated API calls
 export async function apiCall(endpoint: string, options: RequestInit = {}) {

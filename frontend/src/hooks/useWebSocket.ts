@@ -65,9 +65,9 @@ export function useWebSocket(enabled: boolean = true): UseWebSocketReturn {
 
     const token = session.access_token
 
-    const baseWsUrl = import.meta.env.PROD
-      ? 'wss://api.activateyourvoice.tech/ws'
-      : 'ws://localhost:8000/ws'
+    const baseWsUrl = import.meta.env.DEV
+      ? 'ws://localhost:8000/ws'
+      : 'wss://api.activateyourvoice.tech/ws'
     const wsUrl = `${baseWsUrl}?mode=chat&token=${encodeURIComponent(token)}`
 
     setStatus('connecting')
