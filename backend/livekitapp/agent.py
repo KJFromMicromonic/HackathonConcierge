@@ -23,12 +23,11 @@ import os
 from pathlib import Path
 
 from dotenv import load_dotenv
-from livekit.agents.voice.agent_session import TurnDetectionMode
 from loguru import logger
 
 from livekit import agents
 from livekit.agents import AgentSession, Agent, room_io
-from livekit.plugins import silero, speechmatics
+from livekit.plugins import silero, speechmatics, elevenlabs
 
 import sys
 from pathlib import Path
@@ -60,14 +59,16 @@ VOICE_MODEL_NAME = os.getenv("VOICE_MODEL_NAME", "gpt-4o-mini")
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY", "")
 
-# Voice-specific system prompt: shared base + voice guidelines
-VOICE_SYSTEM_PROMPT = BASE_SYSTEM_PROMPT + """
-## Voice Mode Guidelines
-- Keep responses SHORT — 2-3 sentences max per turn
-- Be conversational and natural, not robotic
-- Avoid markdown formatting, bullet lists, or code blocks — speak in plain sentences
-- Use simple language that sounds good when spoken aloud
-- If the user asks a complex question, give a brief answer and offer to elaborate
+# Voice-specific system prompt: trimmed for low latency (fewer input tokens)
+VOICE_SYSTEM_PROMPT = """You are AURA, the voice AI concierge for the Activate Your Voice hackathon in Paris (Feb 28–Mar 1, 2026).
+
+Help participants with schedule, rules, partner APIs (Speechmatics, OpenAI, Backboard), and project guidance. Be friendly, enthusiastic, and encouraging.
+
+Voice rules:
+- 1-3 sentences max per turn
+- Speak naturally, no markdown or lists
+- Simple words that sound good spoken aloud
+- For complex questions, give a brief answer and offer to elaborate
 """
 
 
@@ -164,16 +165,20 @@ async def entrypoint(ctx: agents.JobContext) -> None:
         model_name=VOICE_MODEL_NAME,
     )
 
+    # Pre-warm: resolve thread now so the first message doesn't pay the cost
+    thread_id = await backboard_llm._session_store.get_or_create_thread(user_id)
+    logger.info(f"[Agent] Pre-warmed thread {thread_id} for user {user_id}")
+
     # Create the voice pipeline session with Speechmatics STT + TTS
     session = AgentSession(
         stt=speechmatics.STT(
             language="en",
             enable_partials=True,
-            turn_detection_mode=TurnDetectionMode.SMART_TURN,
         ),
         llm=backboard_llm,
-        tts=speechmatics.TTS(
-            voice="sarah",
+        tts=elevenlabs.TTS(
+            voice_id="hpp4J3VqNfWAUOO0d1Us",
+            model="eleven_flash_v2_5",
         ),
         vad=silero.VAD.load(),
     )

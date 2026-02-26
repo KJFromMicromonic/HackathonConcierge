@@ -106,7 +106,9 @@ class BackboardLLM(llm.LLM):
 
     def _get_client(self) -> httpx.AsyncClient:
         if self._client is None or self._client.is_closed:
-            self._client = httpx.AsyncClient(timeout=60)
+            self._client = httpx.AsyncClient(
+                timeout=httpx.Timeout(30, connect=5),
+            )
         return self._client
 
     def chat(
@@ -235,7 +237,7 @@ class BackboardLLMStream(llm.LLMStream):
                     "llm_provider": self._llm_provider,
                     "model_name": self._model_name,
                     "stream": "true",
-                    "memory": "auto",
+                    "memory": "readonly",
                 },
             ) as response:
                 response.raise_for_status()
