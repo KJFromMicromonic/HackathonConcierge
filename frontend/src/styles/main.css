@@ -697,6 +697,7 @@ body {
 }
 
 .sidebar-toggle {
+  display: none;
   background: transparent;
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
@@ -1811,7 +1812,11 @@ body {
     width: 280px !important;
   }
 
-  /* Hide collapse button on mobile - use hamburger menu instead */
+  /* Show hamburger on mobile, hide desktop collapse button */
+  .sidebar-toggle {
+    display: block;
+  }
+
   .sidebar-collapse-btn {
     display: none;
   }
