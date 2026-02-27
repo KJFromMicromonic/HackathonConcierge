@@ -17,12 +17,12 @@ class Settings(BaseSettings):
     backboard_assistant_id: str = ""  # DEPRECATED: Each user now gets their own assistant
 
     # Chat Mode LLM (can use more powerful model, latency less critical)
-    chat_llm_provider: str = "anthropic"
-    chat_model_name: str = "claude-sonnet-4-5-20250929"
+    chat_llm_provider: str = "openai"
+    chat_model_name: str = "gpt-5.2-codex"
 
     # Voice Mode LLM (needs fast responses for natural conversation)
-    voice_llm_provider: str = "xai"
-    voice_model_name: str = "grok-4-1-fast-non-reasoning"
+    voice_llm_provider: str = "openai"
+    voice_model_name: str = "gpt-4o-mini"
 
     # Supabase
     supabase_url: str = "https://eefdoafrhcehtafkewnc.supabase.co"
